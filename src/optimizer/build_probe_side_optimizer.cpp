@@ -159,7 +159,7 @@ void BuildProbeSideOptimizer::VisitOperator(LogicalOperator &op) {
 		case JoinType::LEFT:
 		case JoinType::RIGHT:
 			if (join.right_projection_map.empty()) {
-				TryFlipJoinChildren(join, 2);
+				TryFlipJoinChildren(join, 1);
 			}
 			break;
 		case JoinType::SEMI:
