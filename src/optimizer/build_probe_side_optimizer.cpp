@@ -162,9 +162,9 @@ void BuildProbeSideOptimizer::TryFlipJoinChildren(LogicalOperator &op) {
 		}
 	}
 
-	if (swap) {
-		FlipChildren(op);
-	}
+	// if (swap) {
+	// 	FlipChildren(op);
+	// }
 }
 
 void BuildProbeSideOptimizer::VisitOperator(LogicalOperator &op) {
