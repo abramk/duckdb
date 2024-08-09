@@ -158,7 +158,7 @@ void BuildProbeSideOptimizer::TryFlipJoinChildren(LogicalOperator &op) {
 		// if more projected bindings are in the right (meaning right/build)
 		// then swap them. The projected bindings are swapped to the left/probe side.)
 		if ((swap && bindings_in_left > bindings_in_right) || (!swap && bindings_in_right > bindings_in_left)) {
-			swap = !swap;
+			// swap = !swap;
 		}
 	}
 
