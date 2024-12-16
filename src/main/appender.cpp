@@ -60,6 +60,9 @@ Appender::Appender(Connection &con, const string &schema_name, const string &tab
 		// table could not be found
 		throw CatalogException(StringUtil::Format("Table \"%s.%s\" could not be found", schema_name, table_name));
 	}
+	if (table_name == "ads_crash_test") {
+		throw InternalException("Custom exception to test handling");
+	}
 	vector<optional_ptr<const ParsedExpression>> defaults;
 	for (auto &column : description->columns) {
 		if (column.Generated()) {
