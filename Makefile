@@ -285,6 +285,10 @@ ifdef DUCKDB_PLATFORM
 	endif
 endif
 
+ifeq ("${BUNDLE_LIBRARY_BASE}", "")
+    BUNDLE_LIBRARY_BASE:="release"
+endif
+
 clean:
 	rm -rf build
 
@@ -474,8 +478,8 @@ generate-files:
 # Run the formatter again after (re)generating the files
 	$(MAKE) format-main
 
-bundle-library: release
-	cd build/release && \
+bundle-library: ${BUNDLE_LIBRARY_BASE}
+	cd build/${BUNDLE_LIBRARY_BASE} && \
 	mkdir -p bundle && \
 	cp src/libduckdb_static.a bundle/. && \
 	cp third_party/*/libduckdb_*.a bundle/. && \
