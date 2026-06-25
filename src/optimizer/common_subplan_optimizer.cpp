@@ -502,7 +502,13 @@ private:
 		case LogicalOperatorType::LOGICAL_TOP_N:
 		case LogicalOperatorType::LOGICAL_DISTINCT:
 		case LogicalOperatorType::LOGICAL_PIVOT:
-		case LogicalOperatorType::LOGICAL_GET:
+		case LogicalOperatorType::LOGICAL_GET: {
+			auto &get = (LogicalGet &)op;
+			if (!get.function.serialize) {
+				return false;
+			}
+			return true;
+		}
 		case LogicalOperatorType::LOGICAL_EXPRESSION_GET:
 		case LogicalOperatorType::LOGICAL_DUMMY_SCAN:
 		case LogicalOperatorType::LOGICAL_COMPARISON_JOIN:
