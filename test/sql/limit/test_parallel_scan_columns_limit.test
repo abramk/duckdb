@@ -1,0 +1,58 @@
+# name: test/sql/limit/test_parallel_scan_columns_limit.test
+# description: parallel_scan_columns_limit gates the parallel batch limit for wide table scans
+# group: [limit]
+
+statement ok
+SET threads=4;
+
+statement ok
+CREATE TABLE narrow AS SELECT i AS a, i AS b FROM range(10000) t(i);
+
+statement ok
+CREATE TABLE wide AS SELECT i AS c01, i AS c02, i AS c03, i AS c04, i AS c05, i AS c06, i AS c07, i AS c08, i AS c09, i AS c10, i AS c11, i AS c12, i AS c13, i AS c14, i AS c15, i AS c16, i AS c17, i AS c18, i AS c19, i AS c20 FROM range(10000) t(i);
+
+# default (16): a NARROW filtered scan still uses the parallel batch limit
+query II
+EXPLAIN SELECT a, b FROM narrow WHERE a > 5 LIMIT 5;
+----
+physical_plan	<!REGEX>:.*STREAMING_LIMIT.*
+
+# default (16): a WIDE filtered scan (20 columns) falls back to the streaming limit,
+# because a parallel scan pins ~one block per projected column per thread
+query II
+EXPLAIN SELECT c01, c02, c03, c04, c05, c06, c07, c08, c09, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, c20 FROM wide WHERE c01 > 5 LIMIT 5;
+----
+physical_plan	<REGEX>:.*STREAMING_LIMIT.*
+
+# raising the setting restores the batch limit for the wide scan
+statement ok
+SET parallel_scan_columns_limit=100;
+
+query II
+EXPLAIN SELECT c01, c02, c03, c04, c05, c06, c07, c08, c09, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, c20 FROM wide WHERE c01 > 5 LIMIT 5;
+----
+physical_plan	<!REGEX>:.*STREAMING_LIMIT.*
+
+# 0 disables the batch limit for table scans entirely, even narrow ones
+statement ok
+SET parallel_scan_columns_limit=0;
+
+query II
+EXPLAIN SELECT a, b FROM narrow WHERE a > 5 LIMIT 5;
+----
+physical_plan	<REGEX>:.*STREAMING_LIMIT.*
+
+statement ok
+SET parallel_scan_columns_limit=16;
+
+# results are unaffected by the plan choice
+query I
+SELECT count(*) FROM (SELECT c01, c02, c03, c04, c05, c06, c07, c08, c09, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, c20 FROM wide WHERE c01 > 5 LIMIT 5) t;
+----
+5
+
+# global-only: cannot be set as a session variable
+statement error
+SET SESSION parallel_scan_columns_limit=32;
+----
+can only be set globally

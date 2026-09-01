@@ -3,12 +3,15 @@
 #include "duckdb/execution/operator/helper/physical_limit_percent.hpp"
 #include "duckdb/execution/operator/scan/physical_table_scan.hpp"
 #include "duckdb/execution/physical_plan_generator.hpp"
+#include "duckdb/main/client_context.hpp"
 #include "duckdb/main/config.hpp"
+#include "duckdb/main/settings.hpp"
 #include "duckdb/planner/operator/logical_limit.hpp"
 
 namespace duckdb {
 
-bool UseBatchLimit(PhysicalOperator &child_node, BoundLimitNode &limit_val, BoundLimitNode &offset_val) {
+bool UseBatchLimit(ClientContext &context, PhysicalOperator &child_node, BoundLimitNode &limit_val,
+                   BoundLimitNode &offset_val) {
 #ifdef DUCKDB_ALTERNATIVE_VERIFY
 	return true;
 #else
@@ -22,6 +25,14 @@ bool UseBatchLimit(PhysicalOperator &child_node, BoundLimitNode &limit_val, Boun
 		case PhysicalOperatorType::TABLE_SCAN: {
 			auto &table_scan = current_op.Cast<PhysicalTableScan>();
 			if (table_scan.table_filters && !table_scan.table_filters->filters.empty()) {
+				// A parallel table scan keeps roughly one block pinned per column, per thread, as long as it
+				// is scanning a row group. For a wide projection this can use more memory even at LIMIT 1, where
+				// the batch limit itself buffers only a single row per thread. Use non-parallel streaming
+				// if the projection is wider than parallel_scan_columns_limit.
+				auto max_scan_columns = Settings::Get<ParallelScanColumnsLimitSetting>(context);
+				if (table_scan.column_ids.size() > max_scan_columns) {
+					return false;
+				}
 				finished = true;
 				break;
 			}
@@ -76,7 +87,7 @@ PhysicalOperator &PhysicalPlanGenerator::CreatePlan(LogicalLimit &op) {
 		}
 
 		// maintaining insertion order is important
-		if (UseBatchIndex(plan) && UseBatchLimit(plan, op.limit_val, op.offset_val)) {
+		if (UseBatchIndex(plan) && UseBatchLimit(context, plan, op.limit_val, op.offset_val)) {
 			// source supports batch index: use parallel batch limit
 			auto &limit = Make<PhysicalLimit>(op.types, std::move(op.limit_val), std::move(op.offset_val),
 			                                  op.estimated_cardinality);

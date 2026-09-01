@@ -874,6 +874,13 @@
         ]
     },
     {
+        "name": "parallel_scan_columns_limit",
+        "description": "The maximum number of columns a filtered table scan may project for a LIMIT over it to still use the parallel batch limit.",
+        "type": "UBIGINT",
+        "scope": "global",
+        "default_value": "16"
+    },
+    {
         "name": "partitioned_write_flush_threshold",
         "description": "The threshold in number of rows after which we flush a thread state when writing using PARTITION_BY",
         "type": "UBIGINT",
